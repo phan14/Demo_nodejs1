@@ -48,7 +48,6 @@ const handleRegister = async (req, res) => {
     })
 
 
-    console.log(">>call me ", req.body);
   }
 }
 

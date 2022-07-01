@@ -1,5 +1,6 @@
 import db from "../models/index"
 import bcrypt from "bcryptjs";
+import { Op } from "sequelize";
 
 
 
@@ -11,7 +12,7 @@ const hashUserPassword = (userPassword) => {
   return hashPassword;
 };
 
-const checkEmail = async (userEmail) => {
+const checkEmailExist = async (userEmail) => {
   let user = await db.User.findOne(
     { where: { email: userEmail } }
   )
@@ -25,7 +26,7 @@ const checkEmail = async (userEmail) => {
 }
 
 
-const checkPhone = async (userPhone) => {
+const checkPhoneExist = async (userPhone) => {
   let user = await db.User.findOne(
     { where: { phone: userPhone } }
   )
@@ -39,10 +40,6 @@ const checkPhone = async (userPhone) => {
 }
 
 
-
-
-
-
 const registerNewUser = async (rawUserData) => {
 
   try {
@@ -50,7 +47,7 @@ const registerNewUser = async (rawUserData) => {
 
 
     //check email/phonenumber are exits
-    let isEmailExist = await checkEmail(rawUserData.email);
+    let isEmailExist = await checkEmailExist(rawUserData.email);
 
     if (isEmailExist === true) {
       return {
@@ -58,7 +55,7 @@ const registerNewUser = async (rawUserData) => {
         EC: 1
       }
     }
-    let isPhoneExits = await checkPhone(rawUserData.phone);
+    let isPhoneExits = await checkPhoneExist(rawUserData.phone);
     if (isPhoneExits === true) {
       return {
         EM: 'the phone is already exits',
@@ -95,6 +92,56 @@ const registerNewUser = async (rawUserData) => {
 
 }
 
+
+
+const checkPassword = (inputPassword, hashPassword) => {
+  return bcrypt.compareSync(inputPassword, hashPassword);//true or false
+}
+
+const handleUserLogin = async (rawData) => {
+  try {
+
+    //check email/phonenumber are exits
+
+    let user = await db.User.findOne({
+      where: {
+        [Op.or]: [
+          { email: rawData.valueLogin },
+          { phone: rawData.valueLogin }
+        ]
+      }
+
+
+    })
+
+    if (user) {
+      console.log(">> found user with email/phone");
+      let isCorrectPassword = checkPassword(rawData.password, user.password)
+      if (isCorrectPassword === true) {
+        return {
+          EM: 'Ok',
+          EC: 0,
+          Dt: ''
+        }
+      }
+    }
+    console.log(">> input found user with email/phone :", rawData.valueLogin, "password: ", rawData.password);
+    return {
+      EM: 'Your email/phone number or password is incorrect',
+      EC: 1,
+      Dt: ''
+    }
+
+  } catch (err) {
+    console.log(err);
+    return {
+      EM: 'something worngs in service...',
+      EC: -2
+    }
+  }
+}
+
 module.exports = {
   registerNewUser,
+  handleUserLogin
 }
